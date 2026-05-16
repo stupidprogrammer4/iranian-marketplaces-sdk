@@ -1,0 +1,36 @@
+[build-system]
+# Specify the build system requirements
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Package metadata
+name = "iranian-marketplaces-sdk"
+version = "0.1.0"
+description = "A unified Python SDK for major Iranian marketplaces (Digikala, Snapp, Basalam, Tapsi)"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "stupidprogrammer4", email = "captainjoker757@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Intended Audience :: Developers",
+]
+
+# Core dependencies required for the SDK
+dependencies = [
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/stupidprogrammer4/iranian-marketplaces-sdk"
+"Bug Tracker" = "https://github.com/stupidprogrammer4/iranian-marketplaces-sdk/issues"
+
+[tool.setuptools.packages.find]
+# Tell setuptools to look for packages inside the 'src' directory
+where = ["src"]
