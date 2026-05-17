@@ -8,6 +8,7 @@ import os
 from iranian_marketplaces_sdk.basalam import AsyncBasalamClient, BasalamClient
 from iranian_marketplaces_sdk.digikala import AsyncDigikalaClient, DigikalaClient
 from iranian_marketplaces_sdk.snapp import AsyncSnappClient, SnappClient
+from iranian_marketplaces_sdk.tapsi import AsyncTapsiClient, TapsiClient
 
 DIGIKALA_ACCESS_TOKEN = os.environ.get("DIGIKALA_ACCESS_TOKEN", "your-access-token")
 DIGIKALA_REFRESH_TOKEN = os.environ.get("DIGIKALA_REFRESH_TOKEN", "your-refresh-token")
@@ -16,6 +17,7 @@ BASALAM_VENDOR_ID = int(os.environ.get("BASALAM_VENDOR_ID", "0"))
 SNAPP_UNIQUE_CODE = os.environ.get("SNAPP_UNIQUE_CODE", "your-unique-code")
 SNAPP_ACCESS_TOKEN = os.environ.get("SNAPP_ACCESS_TOKEN", "your-access-token")
 SNAPP_SELLER_ID = os.environ.get("SNAPP_SELLER_ID", "your-seller-id")
+TAPSI_TOKEN = os.environ.get("TAPSI_TOKEN", "your-token")
 
 
 def digikala_sync_demo() -> None:
@@ -97,6 +99,54 @@ async def snapp_async_demo() -> None:
             print("[async] snapp order detail:", detail["data"]["order_status"])
 
 
+def tapsi_sync_demo() -> None:
+    """Demonstrate the synchronous Tapsi client."""
+    with TapsiClient(TAPSI_TOKEN) as client:
+        products = client.get_products(1, 10)
+        print("[sync] tapsi total products:", products["data"]["totalCount"])
+
+        orders = client.list_orders(query={"pageNumber": 0, "pageSize": 20})
+        print("[sync] tapsi total orders:", orders["data"]["totalItems"])
+
+        result = client.update_products(
+            [
+                {
+                    "id": "your-sku",
+                    "stock": 10,
+                    "price": 20000,
+                    "specialPrice": 10000,
+                    "referenceCode": "ref-001",
+                }
+            ]
+        )
+        print("[sync] tapsi update success:", result["success"])
+
+
+async def tapsi_async_demo() -> None:
+    """Demonstrate the asynchronous Tapsi client."""
+    async with AsyncTapsiClient(TAPSI_TOKEN) as client:
+        products = await client.get_products(1, 10)
+        print("[async] tapsi total products:", products["data"]["totalCount"])
+
+        orders = await client.list_orders(
+            query={"pageNumber": 0, "pageSize": 20}
+        )
+        print("[async] tapsi total orders:", orders["data"]["totalItems"])
+
+        result = await client.update_products(
+            [
+                {
+                    "id": "your-sku",
+                    "stock": 10,
+                    "price": 20000,
+                    "specialPrice": 10000,
+                    "referenceCode": "ref-001",
+                }
+            ]
+        )
+        print("[async] tapsi update success:", result["success"])
+
+
 if __name__ == "__main__":
     digikala_sync_demo()
     asyncio.run(digikala_async_demo())
@@ -104,3 +154,5 @@ if __name__ == "__main__":
     asyncio.run(basalam_async_demo())
     snapp_sync_demo()
     asyncio.run(snapp_async_demo())
+    tapsi_sync_demo()
+    asyncio.run(tapsi_async_demo())
