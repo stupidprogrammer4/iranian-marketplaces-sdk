@@ -7,11 +7,15 @@ import os
 
 from iranian_marketplaces_sdk.basalam import AsyncBasalamClient, BasalamClient
 from iranian_marketplaces_sdk.digikala import AsyncDigikalaClient, DigikalaClient
+from iranian_marketplaces_sdk.snapp import AsyncSnappClient, SnappClient
 
 DIGIKALA_ACCESS_TOKEN = os.environ.get("DIGIKALA_ACCESS_TOKEN", "your-access-token")
 DIGIKALA_REFRESH_TOKEN = os.environ.get("DIGIKALA_REFRESH_TOKEN", "your-refresh-token")
 BASALAM_ACCESS_TOKEN = os.environ.get("BASALAM_ACCESS_TOKEN", "your-access-token")
 BASALAM_VENDOR_ID = int(os.environ.get("BASALAM_VENDOR_ID", "0"))
+SNAPP_UNIQUE_CODE = os.environ.get("SNAPP_UNIQUE_CODE", "your-unique-code")
+SNAPP_ACCESS_TOKEN = os.environ.get("SNAPP_ACCESS_TOKEN", "your-access-token")
+SNAPP_SELLER_ID = os.environ.get("SNAPP_SELLER_ID", "your-seller-id")
 
 
 def digikala_sync_demo() -> None:
@@ -54,8 +58,49 @@ async def basalam_async_demo() -> None:
         print("[async] basalam result_count:", products["result_count"])
 
 
+def snapp_sync_demo() -> None:
+    """Demonstrate the synchronous Snapp client."""
+    with SnappClient(
+        SNAPP_UNIQUE_CODE, SNAPP_ACCESS_TOKEN, SNAPP_SELLER_ID
+    ) as client:
+        products = client.list_products(query={"per_page": 5})
+        total = products["meta"]["pagination"]["total"]
+        print("[sync] snapp total products:", total)
+
+        orders = client.list_orders(query={"per_page": 5})
+        print("[sync] snapp orders count:", orders["meta"]["pagination"]["count"])
+
+        if orders["data"]:
+            order_number = orders["data"][0]["order_number"]
+            detail = client.get_order(order_number)
+            print("[sync] snapp order detail:", detail["data"]["order_status"])
+
+
+async def snapp_async_demo() -> None:
+    """Demonstrate the asynchronous Snapp client."""
+    async with AsyncSnappClient(
+        SNAPP_UNIQUE_CODE, SNAPP_ACCESS_TOKEN, SNAPP_SELLER_ID
+    ) as client:
+        products = await client.list_products(query={"per_page": 5})
+        total = products["meta"]["pagination"]["total"]
+        print("[async] snapp total products:", total)
+
+        orders = await client.list_orders(query={"per_page": 5})
+        print(
+            "[async] snapp orders count:",
+            orders["meta"]["pagination"]["count"],
+        )
+
+        if orders["data"]:
+            order_number = orders["data"][0]["order_number"]
+            detail = await client.get_order(order_number)
+            print("[async] snapp order detail:", detail["data"]["order_status"])
+
+
 if __name__ == "__main__":
     digikala_sync_demo()
     asyncio.run(digikala_async_demo())
     basalam_sync_demo()
     asyncio.run(basalam_async_demo())
+    snapp_sync_demo()
+    asyncio.run(snapp_async_demo())
