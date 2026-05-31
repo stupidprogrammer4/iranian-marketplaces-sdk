@@ -9,7 +9,7 @@ to ``__init__``, and ``await`` the ``_get`` / ``_post`` / ``_request`` helpers.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Mapping
+from typing import Any, Mapping, Self
 
 import httpx
 
@@ -140,7 +140,7 @@ class BaseAsyncClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self) -> "BaseAsyncClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(

@@ -9,7 +9,7 @@ for requiring their own credentials explicitly in their constructors.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Mapping
+from typing import Any, Mapping, Self
 
 import httpx
 
@@ -17,7 +17,6 @@ from ._http import build_api_error
 from .exceptions import NetworkError
 
 DEFAULT_TIMEOUT = 30.0
-
 
 class BaseClient:
     """Thin wrapper around :class:`httpx.Client` with unified error handling."""
@@ -140,7 +139,7 @@ class BaseClient:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "BaseClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
