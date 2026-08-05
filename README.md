@@ -1,88 +1,197 @@
 # Iranian Marketplaces SDK
 
-A unified, robust, and fully-typed Python SDK for integrating with major Iranian marketplaces, including Digikala, Snapp, Basalam, and Tapsi.
+A unified Python SDK for the major Iranian marketplaces — **Digikala**, **Snapp Shop**, **Basalam**
+and **Tapsi Shop** — with a synchronous and an asynchronous engine for each, and pydantic models
+for every request and response.
 
-This SDK provides both Synchronous and Asynchronous clients, utilizing `httpx` for high-performance HTTP requests, and strict `TypedDict` structures for predictable API responses.
+```python
+from iranian_marketplaces_sdk import SnappSync
+from iranian_marketplaces_sdk.marketplaces.snapp.data import VendorProductsQuery
 
-## Features
+with SnappSync(unique_code="…", access_token="…", seller_id="…") as snapp:
+    page = snapp.list_products(query=VendorProductsQuery(per_page=50))
+    for product in page.data:
+        print(product.sku, product.price, product.stock)
+```
 
-- **Sync & Async Support:** Choose between blocking and non-blocking engines based on your architecture.
-- **Fully Typed:** Built-in `TypedDict` definitions for all request payloads and responses.
-- **Unified Architecture:** Consistent developer experience across all supported marketplaces.
-- **Custom Exceptions:** Clean error handling with marketplace-specific exception classes.
-- **Modern Python:** Built for Python 3.13 and above.
+The async engine is the same code with `await`:
+
+```python
+from iranian_marketplaces_sdk import SnappAsync
+
+async with SnappAsync(unique_code="…", access_token="…", seller_id="…") as snapp:
+    page = await snapp.list_products(query=VendorProductsQuery(per_page=50))
+```
+
+## What it gives you
+
+- **Both engines, one shape.** Every marketplace ships `<Name>Sync` and `<Name>Async` with the same
+  methods, taking and returning the same models. Porting a call site is adding or removing `await`.
+- **Validated models, not dicts.** Requests and responses are pydantic v2 models, so a payload key
+  typo fails before the request leaves and a response arrives with real attributes and real types.
+- **Forward-compatible responses.** Response models keep fields the marketplace adds later — an
+  upstream addition reaches you on `model_extra` instead of breaking the call.
+- **One error hierarchy.** Everything descends from `MarketplaceError`, narrowing to
+  `AuthenticationError`, `NotFoundError`, `RateLimitError`, `ServerError`, `NetworkError`,
+  `ConfigurationError` and `ResponseValidationError`.
+- **Credentials required up front.** Each engine's constructor names exactly what that marketplace
+  needs, and a missing one fails at construction rather than mid-batch.
 
 ## Requirements
 
-- Python >= 3.13
-- `httpx` >= 0.24.0
+- Python ≥ 3.13
+- `httpx` ≥ 0.27, `pydantic` ≥ 2.7
 
 ## Installation
 
-For local development and testing, you can install the package in editable mode. Run the following command in the root directory of the project (where `pyproject.toml` is located):
+```bash
+pip install iranian-marketplaces-sdk
+```
+
+For local development (dev and test tools live in `[dependency-groups]`):
 
 ```bash
-pip install -e .
+uv sync --group dev          # or: pip install -e . && pip install ruff mypy pyright pytest
 ```
 
-(Once published to a registry, you will be able to install it via pip install iranian-marketplaces-sdk)
+## Credentials
 
-# Quick Start
+| Marketplace | Constructor | Authentication |
+| --- | --- | --- |
+| Digikala | `DigikalaSync(access_token, refresh_token="")` | `Authorization: Bearer <token>` |
+| Snapp Shop | `SnappSync(unique_code, access_token, seller_id)` | `Authorization: Bearer <token>` + `User-Agent: <unique_code>` |
+| Basalam | `BasalamSync(vendor_id, access_token)` | `Authorization: Bearer <token>` |
+| Tapsi Shop | `TapsiSync(token, client_name=…, client_version=…)` | `TapsiShop.Hub.Authorization: <token>` |
 
-## Synchronous Usage
+Digikala bootstraps its pair from an authorization code and can roll it over in place:
 
 ```python
-from iranian_marketplaces_sdk.digikala.engine import DigikalaClient
+from iranian_marketplaces_sdk import DigikalaSync
 
-# Initialize the client with required credentials
-client = DigikalaClient(access_token="your_access_token", refresh_token="your_refresh_token")
+tokens = DigikalaSync.create_token("authorization-code-from-the-panel")
 
-# Make a synchronous request
+with DigikalaSync(tokens.data.access_token, tokens.data.refresh_token) as digikala:
+    fresh = digikala.refresh_token()  # the client keeps using the new token; store the pair
+```
+
+Each Digikala endpoint sits behind a scope (`variant`, `order`, `inventory`, `package`, `invoice`,
+`promotion`). `get_scopes()` reports what the current token may actually do.
+
+## Coverage
+
+| Marketplace | Endpoints |
+| --- | --- |
+| **Digikala** | health check, auth scopes, token create/refresh; variants (list, get, update, activation, gold, seller stock, selling price); orders and order history; inventories and dead stock; packages (list, detail); invoices (list, detail, financial items); smart-discount pricing (list, create, batch edit, delete) |
+| **Snapp Shop** | vendor products (list, batch update); vendor orders (list, detail) |
+| **Basalam** | vendor products (list, batch update); vendor parcels; vendor discounts (create, delete) |
+| **Tapsi Shop** | vendor products (list, batch update); vendor orders |
+
+## Working with the models
+
+Request models send **only the fields you set**, so a partial update stays partial:
+
+```python
+from iranian_marketplaces_sdk.marketplaces.digikala.data import UpdateVariantRequest
+
+digikala.update_variant(12345, UpdateVariantRequest(seller_stock=7))
+# body on the wire: {"seller_stock": 7} — the price is untouched
+```
+
+Where a marketplace's wire name is not snake_case, the model carries an alias. Python stays
+readable; the bytes stay exactly what the API documented:
+
+```python
+from iranian_marketplaces_sdk.marketplaces.tapsi.data import ProductUpdate
+
+ProductUpdate(id="sku-1", stock=4, price=1000, reference_code="ref-1").to_payload()
+# {"id": "sku-1", "stock": 4, "price": 1000, "referenceCode": "ref-1"}
+```
+
+Multi-value filters are Python lists; each marketplace joins or repeats them the way it wants:
+
+```python
+from iranian_marketplaces_sdk.marketplaces.digikala.data import VariantSearch
+
+digikala.list_variants(search=VariantSearch(ids=[11, 22], category_ids=[3, 4]))
+# search[ids]=11_22 & search[category_ids]=3,4
+```
+
+Timestamps are kept as the strings the marketplaces send. Between them these APIs use four
+different formats — including the Persian calendar and Digikala's `{date, timezone_type, timezone}`
+envelope — and several fields are documented as one and observed as another, so parsing them here
+would mean a whole page failing to load over one odd value.
+
+## Errors
+
+```python
+from iranian_marketplaces_sdk import (
+    AuthenticationError,
+    MarketplaceError,
+    RateLimitError,
+    ResponseValidationError,
+)
+
 try:
-    orders = client.get_orders()
-    print(orders)
-except Exception as e:
-    print(f"An error occurred: {e}")
+    page = snapp.list_products()
+except AuthenticationError:
+    ...  # 401/403 — refresh or re-issue the token
+except RateLimitError as exc:
+    time.sleep(exc.retry_after or 30)
+except ResponseValidationError as exc:
+    log.warning("schema drift: %s", exc.errors)
+    raw = exc.raw  # the decoded body is still here
+except MarketplaceError:
+    ...  # everything else the SDK raises
 ```
 
-## Asynchronous Usage
+## Picking a marketplace at runtime
+
 ```python
-import asyncio
-from iranian_marketplaces_sdk.digikala.async_engine import AsyncDigikalaClient
+from iranian_marketplaces_sdk import available, get_sync_client
 
-async def main():
-    # Initialize the async client with required credentials
-    client = AsyncDigikalaClient(access_token="your_access_token", refresh_token="your_refresh_token")
-    
-    # Make an asynchronous request
-    try:
-        orders = await client.get_orders()
-        print(orders)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+available()  # ('basalam', 'digikala', 'snapp', 'tapsi')
+client = get_sync_client("digikala", access_token="…")
 ```
 
-# Supported Marketplaces
-- **Digikala**: API integration for seller operations.
+The registry holds classes, not instances — one instance carries one seller's credentials, so build
+one per seller rather than caching a client globally.
 
-- **Snapp**: Integration for orders and dispatch management.
+## Layout
 
-- **Basalam**: Vendor management and order processing.
+Every marketplace package is laid out the same way:
 
-- **Tapsi**: Delivery and shipment tracking operations.
-
-# Directory Structure
 ```
-src/
-└── iranian_marketplaces_sdk/
-    ├── digikala/
-    ├── snapp/
-    ├── basalam/
-    └── tapsi/
+iranian_marketplaces_sdk/
+├── common/                  # shared across every marketplace
+│   ├── constants.py         #   timeouts and the like
+│   ├── data.py              #   the pydantic bases: Response/Request/Query schemas
+│   ├── exceptions.py        #   the error hierarchy
+│   ├── http.py              #   SyncTransport / AsyncTransport over httpx
+│   ├── interfaces.py        #   the two engine protocols
+│   └── utils.py             #   query and credential helpers
+└── marketplaces/
+    └── <name>/
+        ├── constants.py     #   base URL, endpoint paths, fixed API values
+        ├── data/            #   credentials + request/response models, split by scope
+        ├── helpers.py       #   pure functions: headers, queries, payloads
+        ├── sync_engine.py   #   thin shell over the transport
+        └── async_engine.py  #   the same, awaited
 ```
 
-# License
-This project is licensed under the MIT License.
+The two engines share every decision through `data/` and `helpers.py`, so only the transport call
+differs — which is what stops them from drifting apart.
+
+## Development
+
+```bash
+pytest                # the suite runs fully offline against a mock transport
+ruff check . && ruff format --check .
+mypy && pyright
+```
+
+`main.py` holds runnable examples for every marketplace, sync and async, driven by environment
+variables.
+
+## License
+
+MIT.
