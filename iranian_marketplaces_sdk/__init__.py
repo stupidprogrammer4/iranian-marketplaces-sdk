@@ -72,4 +72,4 @@ from iranian_marketplaces_sdk.marketplaces import available as available
 from iranian_marketplaces_sdk.marketplaces import get_async_client as get_async_client
 from iranian_marketplaces_sdk.marketplaces import get_sync_client as get_sync_client
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
