@@ -1,6 +1,6 @@
 """Digikala — the credentials both engines are built from."""
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from iranian_marketplaces_sdk.common.data import MarketplaceConfig
 from iranian_marketplaces_sdk.common.utils import require_text
@@ -21,8 +21,8 @@ class DigikalaConfig(MarketplaceConfig):
     raises rather than sending an empty string Digikala would reject anyway.
     """
 
-    access_token: str
-    refresh_token: str = ""
+    access_token: str = Field(repr=False)
+    refresh_token: str = Field(default="", repr=False)
 
     @model_validator(mode="after")
     def _check(self) -> "DigikalaConfig":

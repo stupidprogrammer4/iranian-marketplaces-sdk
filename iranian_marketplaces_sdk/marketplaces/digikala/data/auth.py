@@ -5,7 +5,7 @@ afterwards. Both calls are unauthenticated: they are what *produces* the credent
 bootstrapping call cannot require one.
 """
 
-from typing import Any
+from pydantic import Field, JsonValue
 
 from iranian_marketplaces_sdk.common.data import RequestSchema, ResponseSchema
 from iranian_marketplaces_sdk.marketplaces.digikala.data.common import (
@@ -29,7 +29,8 @@ class Scope(ResponseSchema):
     """A single permission scope grantable to an access token.
 
     ``key`` is what the endpoint documentation calls the scope (``variant``, ``order``,
-    ``invoice``, ...); ``access`` is what this token may actually do with it.
+    ``invoice``, ...); ``access`` is the level described by this scope listing, not proof of
+    authorization for the current seller token.
     """
 
     key: str
@@ -45,7 +46,7 @@ class ScopesData(ResponseSchema):
     pager: Pager
     form_data: list[None]
     items: list[Scope]
-    meta_data: dict[str, Any]
+    meta_data: dict[str, JsonValue] | list[JsonValue]
 
 
 class ScopesResponse(ResponseSchema):
@@ -58,7 +59,7 @@ class ScopesResponse(ResponseSchema):
 class TokenRequest(RequestSchema):
     """Request body for ``POST /auth/token``."""
 
-    authorization_code: str
+    authorization_code: str = Field(repr=False)
 
 
 class RefreshTokenRequest(RequestSchema):
@@ -68,15 +69,15 @@ class RefreshTokenRequest(RequestSchema):
     authorises the exchange with the refresh token.
     """
 
-    access_token: str
-    refresh_token: str
+    access_token: str = Field(repr=False)
+    refresh_token: str = Field(repr=False)
 
 
 class TokenData(ResponseSchema):
     """The ``data`` payload of a token-generation response."""
 
-    access_token: str
-    refresh_token: str
+    access_token: str = Field(repr=False)
+    refresh_token: str = Field(repr=False)
     access_token_expires_at: DigikalaDateTime
     refresh_token_expires_at: DigikalaDateTime
 
