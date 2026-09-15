@@ -74,8 +74,11 @@ packages = ["iranian_marketplaces_sdk"]
 include = [
     "/iranian_marketplaces_sdk",
     "/tests",
-    "/main.py",
+    "/examples",
     "/README.md",
+    "/CONTRIBUTING.md",
+    "/RELEASING.md",
+    "/docs",
 ]
 
 [tool.ruff]
@@ -117,7 +120,7 @@ docstring-code-format = true
 
 [tool.mypy]
 python_version = "3.13"
-files = ["iranian_marketplaces_sdk", "tests", "main.py"]
+files = ["iranian_marketplaces_sdk", "tests", "examples"]
 strict = true
 warn_unreachable = true
 warn_unused_configs = true
@@ -162,6 +165,6 @@ exclude_lines = [
 ]
 
 [tool.pyright]
-include = ["iranian_marketplaces_sdk", "tests", "main.py"]
+include = ["iranian_marketplaces_sdk", "tests", "examples"]
 pythonVersion = "3.13"
 typeCheckingMode = "strict"

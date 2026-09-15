@@ -36,9 +36,11 @@ Each marketplace must have its own directory containing exactly these core files
 - The `__init__` method of every engine MUST require the marketplace-specific credentials explicitly (e.g., `access_token`, `refresh_token`, `client_id`, `api_key`, etc.).
 - **STOP AND ASK:** Before you write any implementation for a marketplace, you MUST ask the user: *"What are the exact required credentials and authentication methods (e.g., Headers, Bearer token, query params) for this marketplace?"* Do not hallucinate or guess the authentication flow if the user hasn't explicitly provided it in the prompt.
 
-## 5. Testing & Validation (`main.py`)
-- All implementations must be accompanied by usage examples and tests inside a root `main.py` file.
-- The `main.py` file should demonstrate how to initialize both the sync and async engines and make sample calls.
+## 5. Examples, Documentation & Tests
+- Put independently runnable sync and async examples in `examples/<marketplace>/`.
+- Examples must read credentials from the environment when run and make no requests on import.
+- Put automated, offline tests in `tests/`.
+- Organize `docs/` as a learning path for SDK users, with API tables under reference sections.
 
 ## 6. Packaging & Coding Standards
 - The final goal is a `pip`-installable package (configured via `pyproject.toml`).
@@ -52,4 +54,4 @@ When instructed to work on a new marketplace:
 3. Once provided, write `constants.py` and the relevant `types/` submodule(s) (creating `types/common.py` first if shared bases are needed), then re-export them from `types/__init__.py`.
 4. Write the sync client in `engine.py`.
 5. Write the async client in `async_engine.py`.
-6. Provide the test code for `main.py`.
+6. Add usage examples in `examples/<marketplace>/`, offline tests in `tests/`, and user guides in `docs/`.
