@@ -17,7 +17,7 @@ and get back the decoded body — or one of the exceptions in
 
 from collections.abc import Mapping
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, BinaryIO, Self
 
 import httpx
 
@@ -30,6 +30,8 @@ from iranian_marketplaces_sdk.common.exceptions import (
     RateLimitError,
     ServerError,
 )
+
+type UploadFiles = Mapping[str, tuple[str, bytes | BinaryIO, str]]
 
 
 def _extract_body(response: httpx.Response) -> Any:
@@ -136,7 +138,7 @@ class SyncTransport:
         """Replace a header on the live session — how a refreshed token takes effect."""
         self._client.headers[name] = value
 
-    def request(
+    def request_response(
         self,
         method: str,
         path: str,
@@ -145,8 +147,9 @@ class SyncTransport:
         json: Any = None,
         data: Any = None,
         headers: Mapping[str, str] | None = None,
-    ) -> Any:
-        """Perform a request and return the decoded body.
+        files: UploadFiles | None = None,
+    ) -> httpx.Response:
+        """Perform a request and preserve bytes and headers, including file downloads.
 
         Transport failures become :class:`NetworkError`; a non-2xx becomes the matching
         :class:`APIError` subclass, carrying the body the marketplace sent with it.
@@ -159,6 +162,7 @@ class SyncTransport:
                 json=json,
                 data=data,
                 headers=dict(headers) if headers else None,
+                files=files,
             )
         except httpx.TimeoutException as exc:
             raise NetworkError(f"Request to {path} timed out") from exc
@@ -167,7 +171,24 @@ class SyncTransport:
 
         if response.is_error:
             raise build_api_error(response)
-        return _decode(response)
+        return response
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Mapping[str, Any] | None = None,
+        json: Any = None,
+        data: Any = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        """Perform a request and decode its JSON or text body."""
+        return _decode(
+            self.request_response(
+                method, path, params=params, json=json, data=data, headers=headers
+            )
+        )
 
     def get(
         self,
@@ -278,6 +299,37 @@ class AsyncTransport:
         """Replace a header on the live session — how a refreshed token takes effect."""
         self._client.headers[name] = value
 
+    async def request_response(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Mapping[str, Any] | None = None,
+        json: Any = None,
+        data: Any = None,
+        headers: Mapping[str, str] | None = None,
+        files: UploadFiles | None = None,
+    ) -> httpx.Response:
+        """Perform a request and preserve bytes. See :meth:`SyncTransport.request_response`."""
+        try:
+            response = await self._client.request(
+                method,
+                path,
+                params=params,
+                json=json,
+                data=data,
+                headers=dict(headers) if headers else None,
+                files=files,
+            )
+        except httpx.TimeoutException as exc:
+            raise NetworkError(f"Request to {path} timed out") from exc
+        except httpx.TransportError as exc:
+            raise NetworkError(f"Request to {path} failed: {exc}") from exc
+
+        if response.is_error:
+            raise build_api_error(response)
+        return response
+
     async def request(
         self,
         method: str,
@@ -288,24 +340,12 @@ class AsyncTransport:
         data: Any = None,
         headers: Mapping[str, str] | None = None,
     ) -> Any:
-        """Perform a request and return the decoded body. See :meth:`SyncTransport.request`."""
-        try:
-            response = await self._client.request(
-                method,
-                path,
-                params=params,
-                json=json,
-                data=data,
-                headers=dict(headers) if headers else None,
+        """Perform a request and decode its JSON or text body."""
+        return _decode(
+            await self.request_response(
+                method, path, params=params, json=json, data=data, headers=headers
             )
-        except httpx.TimeoutException as exc:
-            raise NetworkError(f"Request to {path} timed out") from exc
-        except httpx.TransportError as exc:
-            raise NetworkError(f"Request to {path} failed: {exc}") from exc
-
-        if response.is_error:
-            raise build_api_error(response)
-        return _decode(response)
+        )
 
     async def get(
         self,
