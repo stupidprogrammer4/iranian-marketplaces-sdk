@@ -9,4 +9,6 @@ from iranian_marketplaces_sdk.marketplaces.digikala.async_engine import (
     DigikalaAsync as DigikalaAsync,
 )
 from iranian_marketplaces_sdk.marketplaces.digikala.data import DigikalaConfig as DigikalaConfig
+from iranian_marketplaces_sdk.marketplaces.digikala.resources.base import RawResponse as RawResponse
+from iranian_marketplaces_sdk.marketplaces.digikala.resources.base import Upload as Upload
 from iranian_marketplaces_sdk.marketplaces.digikala.sync_engine import DigikalaSync as DigikalaSync

@@ -91,16 +91,17 @@ from iranian_marketplaces_sdk.marketplaces.digikala.helpers import (
     flat_list_params,
     list_params,
 )
+from iranian_marketplaces_sdk.marketplaces.digikala.resources import AsyncResources
 
 
-class DigikalaAsync:
+class DigikalaAsync(AsyncResources):
     """Digikala over the async engine.
 
     Satisfies :class:`~iranian_marketplaces_sdk.common.interfaces.IAsyncMarketplaceClient`.
 
     Every authenticated call sends ``Authorization: Bearer <access_token>``. Each endpoint's scope
-    is named in its docstring: a token granted only ``variant`` will 403 on ``list_orders()``, and
-    :meth:`get_scopes` is how you find out what this token may actually do.
+    is named in its docstring: a token granted only ``variant`` will 403 on ``list_orders()``.
+    ``get_scopes()`` lists the service catalog; ``get_client_scopes()`` lists application scopes.
     """
 
     name = NAME
@@ -199,7 +200,7 @@ class DigikalaAsync:
         return parse(HealthCheckResponse, await self._transport.get(HEALTH_CHECK_ENDPOINT))
 
     async def get_scopes(self) -> ScopesResponse:
-        """The permission scopes granted to the current access token."""
+        """All scopes defined by the service, not the current token's permissions."""
         return parse(ScopesResponse, await self._transport.get(AUTH_SCOPES_ENDPOINT))
 
     async def get_client_scopes(self, client_code: str) -> ScopesResponse:
